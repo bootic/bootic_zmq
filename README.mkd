@@ -1,0 +1,8 @@
+Subscribe to Bootic events over ZQM
+
+```go
+socket, _  := booticzmq.NewZMQSubscriber(zmqAddress, topic)
+daemon.SubscribeToType(NotifierChan, "pageview")
+```
+
+`NotifierChan` is of type `data.EventsChannel` in github.com/bootic/bootic_go_data
