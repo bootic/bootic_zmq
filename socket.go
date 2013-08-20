@@ -19,13 +19,14 @@ func (d *Daemon) listen() {
   for {
     msg, _ := d.socket.Recv(0)
     
-    reg, _ := regexp.Compile(`^([^ ]+)?\s+(.+)`)
+    reg, _ := regexp.Compile(`^(?:[^ ]+)?\s+(.+)`)
     
     r := reg.FindStringSubmatch(string(msg))
     
     if len(r) > 1 {
       payload := r[1]
       event, jsonErr := data.Decode([]byte(payload))
+      
       if jsonErr != nil {
         log.Println("Invalid data", jsonErr)
       } else {
