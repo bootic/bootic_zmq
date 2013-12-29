@@ -13,6 +13,7 @@ import(
 type Daemon struct {
   socket zmq.Socket
   observers map[string][]data.EventsChannel
+  funcObservers []func(*data.Event)
 }
 
 func (d *Daemon) listen() {
@@ -43,6 +44,12 @@ func (self *Daemon) SubscribeToType(observer data.EventsChannel, typeStr string)
 }
 
 func (self *Daemon) Dispatch(event *data.Event) {
+
+  // dispatch to function observers (non-blocking)
+  for _, fn := range self.funcObservers {
+    go fn(event)
+  }
+
   // Dispatch to global observers
   for _, observer := range self.observers["all"] {
     observer <- event
@@ -55,20 +62,27 @@ func (self *Daemon) Dispatch(event *data.Event) {
   }
 }
 
+func (self *Daemon) SubscribeFunc(fn func(*data.Event)) {
+  self.funcObservers = append(self.funcObservers, fn)
+}
+
 func NewZMQSubscriber(host, topic string) (daemon *Daemon, err error) {
   context, _ := zmq.NewContext()
   socket, err := context.NewSocket(zmq.SUB)
-  
+
   socket.SetSockOptString(zmq.SUBSCRIBE, topic)
 
   socket.Connect(host)
-  
+
+  var arr []func(*data.Event)
+
   daemon = &Daemon{
     socket: socket,
     observers: make(map[string][]data.EventsChannel),
+    funcObservers: arr,
   }
-  
+
   go daemon.listen()
-  
+
   return
 }
