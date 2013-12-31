@@ -6,6 +6,7 @@ package booticzmq
 import(
   "regexp"
   "log"
+  "sync"
   data "github.com/bootic/bootic_go_data"
   zmq "github.com/alecthomas/gozmq"
 )
@@ -14,6 +15,7 @@ type Daemon struct {
   socket zmq.Socket
   observers map[string][]data.EventsChannel
   funcObservers []func(*data.Event)
+  subscribeLock *sync.Mutex
 }
 
 func (d *Daemon) listen() {
@@ -40,11 +42,14 @@ func (d *Daemon) listen() {
 }
 
 func (self *Daemon) SubscribeToType(observer data.EventsChannel, typeStr string) {
+  self.subscribeLock.Lock()
   self.observers[typeStr] = append(self.observers[typeStr], observer)
+  self.subscribeLock.Unlock()
 }
 
 func (self *Daemon) Dispatch(event *data.Event) {
-
+  self.subscribeLock.Lock()
+  defer self.subscribeLock.Unlock()
   // dispatch to function observers (non-blocking)
   for _, fn := range self.funcObservers {
     go fn(event)
@@ -63,7 +68,9 @@ func (self *Daemon) Dispatch(event *data.Event) {
 }
 
 func (self *Daemon) SubscribeFunc(fn func(*data.Event)) {
+  self.subscribeLock.Lock()
   self.funcObservers = append(self.funcObservers, fn)
+  self.subscribeLock.Unlock()
 }
 
 func NewZMQSubscriber(host, topic string) (daemon *Daemon, err error) {
@@ -80,6 +87,7 @@ func NewZMQSubscriber(host, topic string) (daemon *Daemon, err error) {
     socket: socket,
     observers: make(map[string][]data.EventsChannel),
     funcObservers: arr,
+    subscribeLock: &sync.Mutex{},
   }
 
   go daemon.listen()
