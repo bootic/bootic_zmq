@@ -12,7 +12,7 @@ import(
 )
 
 type Daemon struct {
-  socket zmq.Socket
+  socket *zmq.Socket
   observers map[string][]data.EventsChannel
   funcObservers []func(*data.Event)
   subscribeLock *sync.Mutex
