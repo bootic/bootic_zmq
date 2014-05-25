@@ -19,19 +19,17 @@ type Daemon struct {
 }
 
 func (d *Daemon) listen() {
+	reg, _ := regexp.Compile(`^(?:[^ ]+)?\s+(.+)`)
   for {
     msg, _ := d.socket.Recv(0)
-    
-    reg, _ := regexp.Compile(`^(?:[^ ]+)?\s+(.+)`)
     
     r := reg.FindStringSubmatch(string(msg))
     
     if len(r) > 1 {
       payload := r[1]
-      event, jsonErr := data.Decode([]byte(payload))
-      
-      if jsonErr != nil {
-        log.Println("Invalid data", jsonErr)
+      event, err := data.Decode([]byte(payload))
+      if err != nil {
+        log.Println("Invalid data", err)
       } else {
        d.Dispatch(event) 
       }
